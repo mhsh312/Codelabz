@@ -195,10 +195,12 @@ export const getCommentReply =
 export const addComment = comment => async (firebase, firestore, dispatch) => {
   try {
     dispatch({ type: actions.ADD_COMMENT_START });
+    let docID;
     await firestore
       .collection("cl_comments")
       .add(comment)
       .then(docref => {
+        docID = docref.id;
         firestore.collection("cl_comments").doc(docref.id).update({
           comment_id: docref.id
         });
@@ -214,6 +216,7 @@ export const addComment = comment => async (firebase, firestore, dispatch) => {
       .then(() => {
         dispatch({ type: actions.ADD_COMMENT_SUCCESS });
       });
+    return docID;
   } catch (e) {
     dispatch({ type: actions.ADD_COMMENT_FAILED, payload: e.message });
   }

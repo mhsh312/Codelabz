@@ -70,7 +70,10 @@ const Textbox = ({ type, handleSubmit }) => {
       <Button
         variant="contained"
         disableElevation
-        onClick={() => handleSubmit(commentText)}
+        onClick={() => {
+          handleSubmit(commentText);
+          setCommentText("");
+        }}
       >
         <Send />
       </Button>
