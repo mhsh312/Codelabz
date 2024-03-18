@@ -21,6 +21,12 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { useDispatch, useSelector } from "react-redux";
 import { useFirebase, useFirestore } from "react-redux-firebase";
 import { getUserProfileData } from "../../store/actions";
+import {
+  dislikeTutorial,
+  likeTutorial
+} from "../../store/actions/tutorialsActions";
+import { getTutorialData } from "../../store/actions/tutorialPageActions";
+import NewTutorial from "../Tutorials/NewTutorial";
 const useStyles = makeStyles(theme => ({
   root: {
     margin: "0.5rem",
@@ -67,17 +73,52 @@ const useStyles = makeStyles(theme => ({
 
 export default function CardWithoutPicture({ tutorial }) {
   const classes = useStyles();
-  const [alignment, setAlignment] = React.useState("left");
-  const [count, setCount] = useState(1);
+  const [alignment, setAlignment] = React.useState(null);
+  const [count, setCount] = useState();
   const dispatch = useDispatch();
   const firebase = useFirebase();
   const firestore = useFirestore();
-  const handleIncrement = () => {
-    setCount(count + 1);
+
+  const handleLike = () => {
+    likeTutorial(tutorial?.tutorial_id, currentUserHandle)(firestore, dispatch);
+    if (alignment === "left") {
+      tutorial.likers = tutorial?.likers.filter(
+        like => like !== currentUserHandle
+      );
+    } else {
+      tutorial.dislikers = tutorial?.dislikers.filter(
+        dislike => dislike !== currentUserHandle
+      );
+      tutorial.likers = [...tutorial.likers, currentUserHandle];
+    }
+    calculateLikes();
   };
 
-  const handleDecrement = () => {
-    setCount(count - 1);
+  const handleDislike = () => {
+    dislikeTutorial(tutorial?.tutorial_id, currentUserHandle)(
+      firestore,
+      dispatch
+    );
+    if (alignment === "right") {
+      tutorial.dislikers = tutorial?.dislikers.filter(
+        dislike => dislike !== currentUserHandle
+      );
+    } else {
+      tutorial.likers = tutorial?.likers.filter(
+        like => like !== currentUserHandle
+      );
+      tutorial.dislikers = [...tutorial.dislikers, currentUserHandle];
+    }
+    calculateLikes();
+  };
+
+  const calculateLikes = () => {
+    setCount(tutorial?.likers.length - tutorial?.dislikers.length);
+    if (tutorial?.likers.includes(currentUserHandle)) {
+      setAlignment("left");
+    } else if (tutorial?.dislikers.includes(currentUserHandle)) {
+      setAlignment("right");
+    }
   };
 
   const handleAlignment = (event, newAlignment) => {
@@ -86,6 +127,7 @@ export default function CardWithoutPicture({ tutorial }) {
 
   useEffect(() => {
     getUserProfileData(tutorial?.created_by)(firebase, firestore, dispatch);
+    calculateLikes();
   }, [tutorial]);
 
   const user = useSelector(
@@ -94,6 +136,14 @@ export default function CardWithoutPicture({ tutorial }) {
         user: { data }
       }
     }) => data
+  );
+
+  const currentUserHandle = useSelector(
+    ({
+      firebase: {
+        profile: { handle }
+      }
+    }) => handle
   );
 
   const getTime = timestamp => {
@@ -188,7 +238,7 @@ export default function CardWithoutPicture({ tutorial }) {
         >
           <ToggleButton
             className={classes.small}
-            onClick={handleIncrement}
+            onClick={handleLike}
             value="left"
             aria-label="left aligned"
           >
@@ -197,9 +247,9 @@ export default function CardWithoutPicture({ tutorial }) {
           </ToggleButton>
           <ToggleButton
             className={classes.small}
-            onClick={handleDecrement}
-            value="center"
-            aria-label="centered"
+            onClick={handleDislike}
+            value="right"
+            aria-label="right aligned"
           >
             <KeyboardArrowDownIcon />
           </ToggleButton>
