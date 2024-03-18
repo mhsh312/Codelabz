@@ -35,7 +35,8 @@ const CommentBox = ({ commentsArray, tutorialId }) => {
   const dispatch = useDispatch();
   const [comments, setComments] = useState([]);
   const [currCommentCount, setCurrCommentCount] = useState(3);
-  const handleSubmit = comment => {
+  const [commentState, setCommentState] = useState(commentsArray);
+  const handleSubmit = async comment => {
     const commentData = {
       content: comment,
       replyTo: tutorialId,
@@ -43,14 +44,28 @@ const CommentBox = ({ commentsArray, tutorialId }) => {
       createdAt: firestore.FieldValue.serverTimestamp(),
       userId: "codelabzuser"
     };
-    addComment(commentData)(firebase, firestore, dispatch);
+    const newCommentID = await addComment(commentData)(
+      firebase,
+      firestore,
+      dispatch
+    );
+
+    if (commentState !== undefined) {
+      setCommentState([...commentState, newCommentID]);
+    } else if (commentsArray !== undefined) {
+      setCommentState([...commentsArray, newCommentID]);
+    } else {
+      setCommentState([newCommentID]);
+    }
   };
 
   useEffect(() => {
-    setComments(commentsArray?.slice(0, currCommentCount));
-  }, [currCommentCount, commentsArray]);
-
-  console.log(commentsArray, comments, currCommentCount);
+    if (commentState !== undefined) {
+      setComments(commentState?.slice(0, currCommentCount));
+    } else {
+      setComments(commentsArray?.slice(0, currCommentCount));
+    }
+  }, [currCommentCount, commentsArray, commentState]);
 
   const increaseCommentCount = () => {
     setCurrCommentCount(state => state + 3);
@@ -63,7 +78,7 @@ const CommentBox = ({ commentsArray, tutorialId }) => {
       data-testId="tutorialpageComments"
     >
       <Typography variant="h5" sx={{ fontWeight: "600" }}>
-        Comments({commentsArray?.length || 0})
+        Comments({commentState?.length || commentsArray?.length || 0})
       </Typography>
       <Textbox handleSubmit={handleSubmit} />
       <Grid container rowSpacing={2}>
@@ -75,7 +90,8 @@ const CommentBox = ({ commentsArray, tutorialId }) => {
           );
         })}
         <Grid item container justifyContent="center">
-          {comments?.length != commentsArray?.length && (
+          {comments?.length <
+            (commentState?.length || commentsArray?.length) && (
             <Button
               sx={{ textTransform: "none", fontSize: "14px" }}
               onClick={increaseCommentCount}
