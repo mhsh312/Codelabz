@@ -3,7 +3,10 @@ import { makeStyles } from "@mui/styles";
 import React, { useEffect, useState } from "react";
 import Textbox from "./Textbox";
 import Comment from "./Comment";
-import { addComment } from "../../../../store/actions/tutorialPageActions";
+import {
+  addComment,
+  getTutorialData
+} from "../../../../store/actions/tutorialPageActions";
 import { useDispatch, useSelector } from "react-redux";
 import { useFirebase, useFirestore } from "react-redux-firebase";
 const useStyles = makeStyles(() => ({
@@ -42,7 +45,9 @@ const CommentBox = ({ commentsArray, tutorialId }) => {
       replyTo: tutorialId,
       tutorial_id: tutorialId,
       createdAt: firestore.FieldValue.serverTimestamp(),
-      userId: "codelabzuser"
+      userId: currentUserHandle,
+      likers: [currentUserHandle],
+      dislikers: []
     };
     const newCommentID = await addComment(commentData)(
       firebase,
@@ -65,7 +70,16 @@ const CommentBox = ({ commentsArray, tutorialId }) => {
     } else {
       setComments(commentsArray?.slice(0, currCommentCount));
     }
+    getTutorialData(tutorialId)(firebase, firestore, dispatch);
   }, [currCommentCount, commentsArray, commentState]);
+
+  const currentUserHandle = useSelector(
+    ({
+      firebase: {
+        profile: { handle }
+      }
+    }) => handle
+  );
 
   const increaseCommentCount = () => {
     setCurrCommentCount(state => state + 3);

@@ -27,7 +27,9 @@ import { useFirebase, useFirestore } from "react-redux-firebase";
 import {
   getCommentData,
   getCommentReply,
-  addComment
+  addComment,
+  likeComment,
+  dislikeComment
 } from "../../../../store/actions/tutorialPageActions";
 const useStyles = makeStyles(() => ({
   container: {
@@ -55,14 +57,22 @@ const useStyles = makeStyles(() => ({
 const Comment = ({ id }) => {
   const classes = useStyles();
   const [showReplyfield, setShowReplyfield] = useState(false);
-  const [alignment, setAlignment] = React.useState("left");
-  const [count, setCount] = useState(1);
+  const [alignment, setAlignment] = React.useState(null);
+  const [count, setCount] = useState(0);
   const firestore = useFirestore();
   const firebase = useFirebase();
   const dispatch = useDispatch();
   useState(() => {
     getCommentData(id)(firebase, firestore, dispatch);
   }, [id]);
+
+  const currentUserHandle = useSelector(
+    ({
+      firebase: {
+        profile: { handle }
+      }
+    }) => handle
+  );
 
   const commentsArray = useSelector(
     ({
@@ -72,7 +82,7 @@ const Comment = ({ id }) => {
     }) => data
   );
 
-  const [data] = commentsArray.filter(comment => comment.comment_id == id);
+  const [comment] = commentsArray.filter(comment => comment.comment_id == id);
 
   const repliesArray = useSelector(
     ({
@@ -84,12 +94,45 @@ const Comment = ({ id }) => {
 
   const [replies] = repliesArray.filter(replies => replies.comment_id == id);
 
-  const handleIncrement = () => {
-    setCount(count + 1);
+  const calculateLikes = () => {
+    setCount(comment?.likers.length - comment?.dislikers.length);
+    if (comment?.likers.includes(currentUserHandle)) {
+      setAlignment("left");
+    } else if (comment?.dislikers.includes(currentUserHandle)) {
+      setAlignment("right");
+    }
   };
 
-  const handleDecrement = () => {
-    setCount(count - 1);
+  useEffect(() => calculateLikes());
+
+  const handleLike = () => {
+    likeComment(id, currentUserHandle)(firestore, dispatch);
+    if (alignment === "left") {
+      comment.likers = comment?.likers.filter(
+        like => like !== currentUserHandle
+      );
+    } else {
+      comment.dislikers = comment?.dislikers.filter(
+        dislike => dislike !== currentUserHandle
+      );
+      comment.likers = [...comment.likers, currentUserHandle];
+    }
+    calculateLikes();
+  };
+
+  const handleDislike = () => {
+    dislikeComment(id, currentUserHandle)(firestore, dispatch);
+    if (alignment === "right") {
+      comment.dislikers = comment?.dislikers.filter(
+        dislike => dislike !== currentUserHandle
+      );
+    } else {
+      comment.likers = comment?.likers.filter(
+        like => like !== currentUserHandle
+      );
+      comment.dislikers = [...comment.dislikers, currentUserHandle];
+    }
+    calculateLikes();
   };
 
   const handleAlignment = (event, newAlignment) => {
@@ -99,23 +142,29 @@ const Comment = ({ id }) => {
   const handleSubmit = comment => {
     const commentData = {
       content: comment,
-      replyTo: data.comment_id,
-      tutorial_id: data.tutorial_id,
+      replyTo: comment.comment_id,
+      tutorial_id: comment.tutorial_id,
       createdAt: firestore.FieldValue.serverTimestamp(),
-      userId: "codelabzuser"
+      userId: currentUserHandle,
+      likers: [currentUserHandle],
+      dislikers: []
     };
     addComment(commentData)(firebase, firestore, dispatch);
   };
 
   return (
-    data && (
+    comment && (
       <>
         <Paper variant="outlined" className={classes.comments}>
           <Typography mb={1} sx={{ fontSize: "18px" }}>
-            {data?.content}
+            {comment?.content}
           </Typography>
           <Grid container justifyContent="space-between">
-            <User id={data?.userId} timestamp={data?.createdAt} size={"sm"} />
+            <User
+              id={comment?.userId}
+              timestamp={comment?.createdAt}
+              size={"sm"}
+            />
             <CardActions className={classes.settings} disableSpacing>
               {!showReplyfield && (
                 <Button
@@ -139,7 +188,7 @@ const Comment = ({ id }) => {
               >
                 <ToggleButton
                   className={classes.small}
-                  onClick={handleIncrement}
+                  onClick={handleLike}
                   value="left"
                   aria-label="left aligned"
                 >
@@ -148,9 +197,9 @@ const Comment = ({ id }) => {
                 </ToggleButton>
                 <ToggleButton
                   className={classes.small}
-                  onClick={handleDecrement}
-                  value="center"
-                  aria-label="centered"
+                  onClick={handleDislike}
+                  value="right"
+                  aria-label="right aligned"
                 >
                   <KeyboardArrowDownIcon />
                 </ToggleButton>
