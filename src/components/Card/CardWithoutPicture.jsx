@@ -25,8 +25,6 @@ import {
   dislikeTutorial,
   likeTutorial
 } from "../../store/actions/tutorialsActions";
-import { getTutorialData } from "../../store/actions/tutorialPageActions";
-import NewTutorial from "../Tutorials/NewTutorial";
 const useStyles = makeStyles(theme => ({
   root: {
     margin: "0.5rem",
