@@ -100,7 +100,9 @@ export const getTutorialFeedData =
             owner: tutorial?.owner,
             created_by: tutorial?.created_by,
             createdAt: tutorial?.createdAt,
-            featured_image: tutorial?.featured_image
+            featured_image: tutorial?.featured_image,
+            likers: tutorial?.likers,
+            dislikers: tutorial?.dislikers
           };
           return tutorialData;
         });
@@ -221,3 +223,69 @@ export const addComment = comment => async (firebase, firestore, dispatch) => {
     dispatch({ type: actions.ADD_COMMENT_FAILED, payload: e.message });
   }
 };
+
+export const likeComment =
+  (comment_id, likedBy) => async (firestore, dispatch) => {
+    try {
+      dispatch({ type: actions.LIKE_COMMENT_START });
+      const docref = await firestore
+        .collection("cl_comments")
+        .doc(comment_id)
+        .get();
+      const comment = await docref.data();
+      if (comment?.likers.includes(likedBy)) {
+        comment.likers = comment?.likers.filter(like => like !== likedBy);
+      } else {
+        comment.likers = [...comment.likers, likedBy];
+        comment.dislikers = comment?.dislikers.filter(
+          dislike => dislike !== likedBy
+        );
+      }
+      await firestore
+        .collection("cl_comments")
+        .doc(comment_id)
+        .update({
+          likers: [...comment.likers],
+          dislikers: [...comment.dislikers]
+        })
+        .then(() => {
+          dispatch({ type: actions.LIKE_COMMENT_SUCCESS });
+        });
+    } catch (e) {
+      console.log("LIKE_COMMENT_FAIL", e);
+      dispatch({ type: actions.LIKE_COMMENT_FAIL, payload: e.message });
+    }
+  };
+
+export const dislikeComment =
+  (comment_id, dislikedBy) => async (firestore, dispatch) => {
+    try {
+      dispatch({ type: actions.DISLIKE_COMMENT_START });
+      const docref = await firestore
+        .collection("cl_comments")
+        .doc(comment_id)
+        .get();
+      const comment = await docref.data();
+      if (comment?.dislikers.includes(dislikedBy)) {
+        comment.dislikers = comment?.dislikers.filter(
+          dislike => dislike !== dislikedBy
+        );
+      } else {
+        comment.dislikers = [...comment.dislikers, dislikedBy];
+        comment.likers = comment?.likers.filter(like => like !== dislikedBy);
+      }
+      await firestore
+        .collection("cl_comments")
+        .doc(comment_id)
+        .update({
+          likers: [...comment.likers],
+          dislikers: [...comment.dislikers]
+        })
+        .then(() => {
+          dispatch({ type: actions.DISLIKE_COMMENT_SUCCESS });
+        });
+    } catch (e) {
+      console.log("LIKE_COMMENT_FAIL", e);
+      dispatch({ type: actions.DISLIKE_COMMENT_FAIL, payload: e.message });
+    }
+  };
