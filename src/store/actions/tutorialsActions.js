@@ -122,13 +122,18 @@ export const createTutorial =
   tutorialData => async (firebase, firestore, dispatch, history) => {
     try {
       dispatch({ type: actions.CREATE_TUTORIAL_START });
-      const { title, summary, owner, created_by, is_org } = tutorialData;
-
+      const { title, summary, owner, created_by, is_org, tutorialImage } =
+        tutorialData;
       const setData = async () => {
         const document = firestore.collection("tutorials").doc();
 
         const documentID = document.id;
         const step_id = `${documentID}_${new Date().getTime()}`;
+
+        const fileType = tutorialImage?.substring(
+          tutorialImage.indexOf(":") + 1,
+          tutorialImage.indexOf("/")
+        );
 
         await document.set({
           created_by,
@@ -140,7 +145,7 @@ export const createTutorial =
           summary,
           title,
           tutorial_id: documentID,
-          featured_image: "",
+          featured_image: fileType === "image" ? tutorialImage : "",
           icon: "",
           url: "",
           background_color: "#ffffff",
