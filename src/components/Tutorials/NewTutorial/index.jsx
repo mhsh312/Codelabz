@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AppstoreAddOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { createTutorial } from "../../../store/actions";
@@ -43,6 +43,8 @@ const NewTutorial = ({ viewModal, onSidebarClick, viewCallback, active }) => {
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [tutorialImage, setTutorialImage] = useState("");
+  const tutImgRef = useRef(null);
   const [formValue, setformValue] = useState({
     title: "",
     summary: "",
@@ -123,6 +125,7 @@ const NewTutorial = ({ viewModal, onSidebarClick, viewCallback, active }) => {
       ...formValue,
       created_by: userHandle,
       is_org: userHandle !== formValue.owner,
+      tutorialImage,
       completed: false
     };
     console.log(tutorialData);
@@ -143,6 +146,36 @@ const NewTutorial = ({ viewModal, onSidebarClick, viewCallback, active }) => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleFileChange = event => {
+    const file = event.target.files[0];
+    const fileSize = file.size;
+
+    if (file) {
+      if (fileSize < 1048487) {
+        const reader = new FileReader();
+
+        reader.readAsDataURL(file);
+        reader.onloadend = () => {
+          const dataURL = reader.result;
+          const fileType = dataURL?.substring(
+            dataURL.indexOf(":") + 1,
+            dataURL.indexOf("/")
+          );
+          if (fileType === "image") {
+            setTutorialImage(dataURL);
+          } else {
+            alert(
+              "Invalid file type! Please enter an image of format .png .jpeg .svg or .webp."
+            );
+            setTutorialImage("");
+          }
+        };
+      } else {
+        alert("File is too big. Please select a file smaller than 1 mb.");
+      }
+    }
   };
 
   const classes = useStyles();
@@ -227,7 +260,15 @@ const NewTutorial = ({ viewModal, onSidebarClick, viewCallback, active }) => {
           />
 
           <IconButton>
-            <ImageIcon />
+            <ImageIcon onClick={() => tutImgRef.current.click()} />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              name="tutImg"
+              ref={tutImgRef}
+              style={{ display: "none" }}
+            />
           </IconButton>
           <IconButton>
             <MovieIcon />
